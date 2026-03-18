@@ -4,7 +4,7 @@ services:
   clickhouse-bytehouse-sync:
     build:
       context: .
-      dockerfile: Dockerfile_clickhouse
+      dockerfile: Dockerfile
     container_name: clickhouse-bytehouse-sync
     restart: unless-stopped
     env_file:

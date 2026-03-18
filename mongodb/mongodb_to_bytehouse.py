@@ -129,6 +129,8 @@ TARGET_DATABASE = os.getenv("TARGET_BH_DATABASE", "default")
 BATCH_SIZE = int(os.getenv("SYNC_BATCH_SIZE", "1000"))
 INCREMENTAL_INTERVAL = int(os.getenv("INCREMENTAL_INTERVAL", "60"))
 COLLECTION_PATTERN = os.getenv("COLLECTION_PATTERN", "*")  # 支持逗号分隔多个模式
+STORE_SOURCE = os.getenv("STORE_SOURCE", "false").lower() in ("true", "1", "yes")  # 是否存储 _source
+ADD_TIMESTAMP = os.getenv("ADD_TIMESTAMP", "false").lower() in ("true", "1", "yes")  # 是否添加 _timestamp
 
 
 def match_collections(collections: List[str], pattern: str) -> List[str]:
@@ -364,8 +366,10 @@ SETTINGS index_granularity = 8192
             # 构建列定义
             columns = []
             columns.append("`_id` String")  # MongoDB 的 _id 字段
-            columns.append("`_source` String")  # 原始 JSON
-            columns.append("`_timestamp` DateTime DEFAULT now()")  # 同步时间戳
+            if STORE_SOURCE:
+                columns.append("`_source` String")  # 原始 JSON
+            if ADD_TIMESTAMP:
+                columns.append("`_timestamp` DateTime DEFAULT now()")  # 同步时间戳
             
             for field_name, field_type in sorted(fields.items()):
                 if field_name in ("_id", "_source", "_timestamp"):
@@ -435,8 +439,13 @@ SETTINGS index_granularity = 8192
         if not batch:
             return
         
-        # 只使用表中定义的列
-        columns = sorted(list(self.current_table_columns - {"_timestamp"}))
+        # 只使用表中定义的列，排除自动填充的列
+        exclude_cols = set()
+        if ADD_TIMESTAMP:
+            exclude_cols.add("_timestamp")
+        if not STORE_SOURCE:
+            exclude_cols.add("_source")
+        columns = sorted(list(self.current_table_columns - exclude_cols))
         
         # 构建插入数据
         rows = []
@@ -459,7 +468,12 @@ SETTINGS index_granularity = 8192
                     added = self.add_new_columns(table_name, new_fields)
                     logger.info(f"    添加了 {added} 个缺失的列，重试插入")
                     # 重新构建并重试
-                    columns = sorted(list(self.current_table_columns - {"_timestamp"}))
+                    exclude_cols = set()
+                    if ADD_TIMESTAMP:
+                        exclude_cols.add("_timestamp")
+                    if not STORE_SOURCE:
+                        exclude_cols.add("_source")
+                    columns = sorted(list(self.current_table_columns - exclude_cols))
                     rows = [tuple(row.get(col) for col in columns) for row in batch]
                     columns_str = ", ".join(f"`{col}`" for col in columns)
                     sql = f"INSERT INTO `{table_name}` ({columns_str}) VALUES"
@@ -525,7 +539,8 @@ SETTINGS index_granularity = 8192
             batch = []
             for doc in docs:
                 row = {"_id": str(doc.get("_id", ""))}
-                row["_source"] = json.dumps(doc, ensure_ascii=False, default=str)
+                if STORE_SOURCE:
+                    row["_source"] = json.dumps(doc, ensure_ascii=False, default=str)
                 
                 flat_doc = self.flatten_document(doc)
                 row.update(flat_doc)
@@ -605,7 +620,8 @@ SETTINGS index_granularity = 8192
         
         for doc in cursor:
             row = {"_id": str(doc.get("_id", ""))}
-            row["_source"] = json.dumps(doc, ensure_ascii=False, default=str)
+            if STORE_SOURCE:
+                row["_source"] = json.dumps(doc, ensure_ascii=False, default=str)
             
             flat_doc = self.flatten_document(doc)
             row.update(flat_doc)

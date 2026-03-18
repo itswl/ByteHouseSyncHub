@@ -4,7 +4,7 @@ services:
   mongodb-bytehouse-sync:
     build:
       context: .
-      dockerfile: Dockerfile_mongodb
+      dockerfile: Dockerfile
     container_name: mongodb-bytehouse-sync
     restart: unless-stopped
     env_file:

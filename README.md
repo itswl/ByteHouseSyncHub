@@ -6,9 +6,9 @@
 
 | 数据源 | 目录 | 说明 |
 |--------|------|------|
-| Elasticsearch | `es/` | ES 索引同步到 ByteHouse |
-| ClickHouse | `clickhouse/` | ClickHouse 表同步到 ByteHouse |
-| MongoDB | `mongodb/` | MongoDB 集合同步到 ByteHouse |
+| Elasticsearch | [`es/`](es/) | ES 索引同步到 ByteHouse |
+| ClickHouse | [`clickhouse/`](clickhouse/) | ClickHouse 表同步到 ByteHouse |
+| MongoDB | [`mongodb/`](mongodb/) | MongoDB 集合同步到 ByteHouse |
 
 ## 功能特性
 
@@ -24,199 +24,63 @@
 
 ```
 bytehouse/
-├── README.md
+├── README.md                        # 项目概述
 │
 ├── es/                              # Elasticsearch → ByteHouse
+│   ├── README.md                    # ES 同步文档
 │   ├── es_to_bytehouse.py
 │   ├── requirements.txt
-│   ├── .env / .env.example
+│   ├── .env.example
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   └── entrypoint.sh
 │
 ├── clickhouse/                      # ClickHouse → ByteHouse
+│   ├── README.md                    # ClickHouse 同步文档
 │   ├── clickhouse_to_bytehouse.py
 │   ├── requirements.txt
-│   ├── clickhouse_to_bytehouse.env
-│   ├── Dockerfile_clickhouse
+│   ├── clickhouse_to_bytehouse.env.example
+│   ├── Dockerfile
 │   └── docker-compose.yml
 │
 └── mongodb/                         # MongoDB → ByteHouse
+    ├── README.md                    # MongoDB 同步文档
     ├── mongodb_to_bytehouse.py
     ├── requirements.txt
-    ├── mongodb_to_bytehouse.env
-    ├── Dockerfile_mongodb
-    └── docker-compose-mongo.yaml
+    ├── mongodb_to_bytehouse.env.example
+    ├── Dockerfile
+    └── docker-compose.yml
 ```
 
----
-
-## MongoDB 同步
-
-### 快速开始
+## 快速开始
 
 ```bash
-cd mongodb
+# 进入对应数据源目录
+cd mongodb  # 或 clickhouse / es
 
-# 1. 配置连接信息
-vim mongodb_to_bytehouse.env
+# 复制配置文件并填写
+cp *.env.example *.env
+vim *.env
 
-# 2. Docker Compose 启动
-docker-compose -f docker-compose-mongo.yaml up -d
-
-# 3. 查看日志
-docker-compose -f docker-compose-mongo.yaml logs -f
-```
-
-### 配置说明
-
-```bash
-# mongodb_to_bytehouse.env
-
-# MongoDB 配置
-MONGO_URI=mongodb://user:pass@host:port/?authSource=admin
-MONGO_DATABASE=mydb
-
-# ByteHouse 配置
-TARGET_BH_HOST=tenant-xxx.bytehouse.volces.com
-TARGET_BH_PORT=19000
-TARGET_BH_USER=bytehouse
-TARGET_BH_PASSWORD=xxx
-TARGET_BH_DATABASE=mongo_sync
-
-# 同步配置
-COLLECTION_PATTERN=collection1,collection2,*_log   # 支持逗号分隔、通配符
-SYNC_BATCH_SIZE=1000
-INCREMENTAL_INTERVAL=60
-
-# 告警配置
-FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
-```
-
-### 命令行用法
-
-```bash
-# auto 模式（推荐）：首次全量，之后持续增量
-python mongodb_to_bytehouse.py --mode auto
-
-# 全量同步
-python mongodb_to_bytehouse.py --mode full --collection-pattern "message_log"
-
-# 增量同步
-python mongodb_to_bytehouse.py --mode incremental --collection-pattern "message_log,user_log"
-
-# 查看同步状态
-python mongodb_to_bytehouse.py --mode status
-```
-
----
-
-## ClickHouse 同步
-
-### 快速开始
-
-```bash
-cd clickhouse
-
-# 1. 配置连接信息
-vim clickhouse_to_bytehouse.env
-
-# 2. Docker Compose 启动
+# Docker Compose 启动
 docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
 ```
 
-### 配置说明
-
-```bash
-# clickhouse_to_bytehouse.env
-
-# 源 ClickHouse 配置
-SOURCE_CH_HOST=192.168.1.100
-SOURCE_CH_PORT=9000
-SOURCE_CH_USER=default
-SOURCE_CH_PASSWORD=xxx
-SOURCE_CH_DATABASE=mydb
-
-# 目标 ByteHouse 配置
-TARGET_BH_HOST=tenant-xxx.bytehouse.volces.com
-TARGET_BH_PORT=19000
-TARGET_BH_USER=bytehouse
-TARGET_BH_PASSWORD=xxx
-TARGET_BH_DATABASE=ch_sync
-
-# 同步配置
-TABLE_PATTERN=spans,logs,*_events    # 支持逗号分隔、通配符
-SYNC_BATCH_SIZE=10000
-INCREMENTAL_INTERVAL=60
-```
-
-### 命令行用法
-
-```bash
-# 全量同步
-python clickhouse_to_bytehouse.py --mode full
-
-# 持续增量同步
-python clickhouse_to_bytehouse.py --mode incremental --continuous --interval 60
-
-# 指定时间字段和开始日期
-python clickhouse_to_bytehouse.py --mode incremental --time-column "created_at" --start-date "2026-03-01"
-
-# 查看同步状态
-python clickhouse_to_bytehouse.py --mode status
-```
-
----
-
-## Elasticsearch 同步
-
-### 快速开始
-
-```bash
-cd es
-
-# 1. 配置连接信息
-vim .env
-
-# 2. Docker Compose 启动
-docker-compose up -d
-```
-
-### 配置说明
-
-```bash
-# .env
-
-# ES 配置
-ES_HOST=http://es-host:9200
-ES_USER=admin
-ES_PASSWORD=xxx
-
-# ByteHouse 配置
-BYTEHOUSE_HOST=tenant-xxx.bytehouse.volces.com
-BYTEHOUSE_PORT=19000
-BYTEHOUSE_USER=bytehouse
-BYTEHOUSE_PASSWORD=xxx
-
-# 同步配置
-TARGET_DATABASE=es_migration
-INDEX_PATTERN=user_*,order_*         # 支持通配符
-INCREMENTAL_INTERVAL=60
-SKIP_FULL_SYNC=false
-```
-
----
-
-## 同步模式说明
+## 同步模式
 
 | 模式 | 说明 |
 |------|------|
-| `full` | 全量同步，清空目标表后重新导入 |
-| `incremental` | 增量同步，基于时间字段或 _id 同步新数据 |
-| `auto` | 智能模式：首次全量，之后持续增量，重启后自动跳过全量 |
+| `full` | 全量同步 |
+| `incremental` | 增量同步 |
+| `auto` | 智能模式：首次全量，之后持续增量 |
 | `status` | 查看同步状态 |
 
-## 表/集合匹配语法
+## 通用配置
+
+### 表/集合匹配
 
 支持逗号分隔多个模式和通配符：
 
@@ -225,30 +89,24 @@ SKIP_FULL_SYNC=false
 COLLECTION_PATTERN=message_log
 
 # 多个（逗号分隔）
-COLLECTION_PATTERN=message_log,user_log,order_log
+COLLECTION_PATTERN=message_log,user_log
 
 # 通配符
 COLLECTION_PATTERN=*_log
 
 # 混合
-COLLECTION_PATTERN=message_log,*_event,user_*
+COLLECTION_PATTERN=message_log,*_event
 ```
 
-## 飞书告警
+### 飞书告警
 
-配置 `FEISHU_WEBHOOK` 后，所有 WARNING 和 ERROR 级别日志会自动推送到飞书：
-
-- ⚠️ WARNING：连接重试、数据异常等
-- ❌ ERROR：同步失败、连接断开等
-
-相同错误 1 分钟内只发送一次，防止刷屏。
+配置 `FEISHU_WEBHOOK` 后，WARNING/ERROR 级别日志自动推送飞书。
 
 ## 注意事项
 
-1. **ByteHouse 表创建延迟**：表创建后需等待 5 秒才能插入数据
-2. **增量字段**：MongoDB 默认使用 `_id`，ClickHouse/ES 需指定时间字段
-3. **字段类型**：所有字段统一存储为 String 类型，嵌套对象转为 JSON 字符串
-4. **网络访问**：确保 Docker 容器能访问源数据库和 ByteHouse
+1. **表创建延迟**：ByteHouse 表创建后需等待 5 秒才能插入数据
+2. **增量字段**：MongoDB 用 `_id`，ClickHouse/ES 需指定时间字段
+3. **字段类型**：所有字段存储为 String，嵌套对象转 JSON 字符串
 
 ## License
 
