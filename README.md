@@ -9,6 +9,7 @@
 | Elasticsearch | [`es/`](es/) | ES 索引同步到 ByteHouse |
 | ClickHouse | [`clickhouse/`](clickhouse/) | ClickHouse 表同步到 ByteHouse |
 | MongoDB | [`mongodb/`](mongodb/) | MongoDB 集合同步到 ByteHouse |
+| ByteHouse | [`bytehouse/`](bytehouse/) | ByteHouse 跨库/跨实例同步 |
 
 ## 功能特性
 
@@ -27,7 +28,7 @@ bytehouse/
 ├── README.md                        # 项目概述
 │
 ├── es/                              # Elasticsearch → ByteHouse
-│   ├── README.md                    # ES 同步文档
+│   ├── README.md
 │   ├── es_to_bytehouse.py
 │   ├── requirements.txt
 │   ├── .env.example
@@ -36,18 +37,26 @@ bytehouse/
 │   └── entrypoint.sh
 │
 ├── clickhouse/                      # ClickHouse → ByteHouse
-│   ├── README.md                    # ClickHouse 同步文档
+│   ├── README.md
 │   ├── clickhouse_to_bytehouse.py
 │   ├── requirements.txt
 │   ├── clickhouse_to_bytehouse.env.example
 │   ├── Dockerfile
 │   └── docker-compose.yml
 │
-└── mongodb/                         # MongoDB → ByteHouse
-    ├── README.md                    # MongoDB 同步文档
-    ├── mongodb_to_bytehouse.py
+├── mongodb/                         # MongoDB → ByteHouse
+│   ├── README.md
+│   ├── mongodb_to_bytehouse.py
+│   ├── requirements.txt
+│   ├── mongodb_to_bytehouse.env.example
+│   ├── Dockerfile
+│   └── docker-compose.yml
+│
+└── bytehouse/                       # ByteHouse → ByteHouse
+    ├── README.md
+    ├── bytehouse_to_bytehouse.py
     ├── requirements.txt
-    ├── mongodb_to_bytehouse.env.example
+    ├── bytehouse_to_bytehouse.env.example
     ├── Dockerfile
     └── docker-compose.yml
 ```

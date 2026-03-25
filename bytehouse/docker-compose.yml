@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  bytehouse-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bytehouse-bytehouse-sync
+    restart: unless-stopped
+    env_file:
+      - bytehouse_to_bytehouse.env
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./logs:/app/logs
+    # 默认增量同步模式
+    command: ["--mode", "incremental", "--continuous", "--interval", "60"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    networks:
+      - sync-network
+
+networks:
+  sync-network:
+    driver: bridge
