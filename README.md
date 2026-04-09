@@ -10,6 +10,7 @@
 | ClickHouse | [`clickhouse/`](clickhouse/) | ClickHouse 表同步到 ByteHouse |
 | MongoDB | [`mongodb/`](mongodb/) | MongoDB 集合同步到 ByteHouse |
 | ByteHouse | [`bytehouse/`](bytehouse/) | ByteHouse 跨库/跨实例同步 |
+| PostgreSQL | [`postgres/`](postgres/) | PostgreSQL 同步到 ByteHouse |
 
 ## 功能特性
 
@@ -52,11 +53,19 @@ bytehouse/
 │   ├── Dockerfile
 │   └── docker-compose.yml
 │
-└── bytehouse/                       # ByteHouse → ByteHouse
+├── bytehouse/                       # ByteHouse → ByteHouse
+│   ├── README.md
+│   ├── bytehouse_to_bytehouse.py
+│   ├── requirements.txt
+│   ├── bytehouse_to_bytehouse.env.example
+│   ├── Dockerfile
+│   └── docker-compose.yml
+│
+└── postgres/                        # PostgreSQL → ByteHouse
     ├── README.md
-    ├── bytehouse_to_bytehouse.py
+    ├── postgres_to_bytehouse.py
     ├── requirements.txt
-    ├── bytehouse_to_bytehouse.env.example
+    ├── postgres_to_bytehouse.env.example
     ├── Dockerfile
     └── docker-compose.yml
 ```

@@ -98,11 +98,6 @@ if LOG_FILE:
     except Exception as e:
         logger.warning(f"无法创建日志文件处理器: {e}")
 
-# 添加标准输出处理器
-console_handler = logging.StreamHandler(sys.stdout)
-console_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-console_handler.setFormatter(console_formatter)
-logger.addHandler(console_handler)
 
 # 添加飞书告警处理器
 if FEISHU_WEBHOOK:
@@ -239,7 +234,7 @@ SETTINGS index_granularity = 8192
         """获取集合的最后同步状态（最后ID和最后时间）"""
         try:
             result = self.target_client.execute(
-                f"SELECT max(last_id), max(last_sync_time) FROM `_sync_state` WHERE `table_name` = '{collection_name}'"
+                f"SELECT last_id, last_sync_time FROM `_sync_state` WHERE `table_name` = '{collection_name}' ORDER BY sync_time DESC LIMIT 1"
             )
             if result and result[0]:
                 last_id = result[0][0] if result[0][0] else ""
@@ -623,10 +618,25 @@ SETTINGS index_granularity = 8192
         elif last_id:
             # 使用上次同步的 _id
             try:
-                query["_id"] = {"$gt": ObjectId(last_id)}
-                logger.info(f"  使用 _id 增量条件: _id > {last_id}")
-            except:
-                logger.warning(f"  无法解析 last_id: {last_id}")
+                # 处理多种 last_id 格式
+                clean_id = last_id
+                if clean_id.startswith('ObjectId("'):
+                    clean_id = clean_id[10:-2]  # 提取 ObjectId("xxx") 中的 xxx
+                elif clean_id.startswith("ObjectId('"):
+                    clean_id = clean_id[10:-2]
+                
+                # 判断是否为数字 ID
+                if clean_id.isdigit():
+                    # 数字 ID，直接比较
+                    query["_id"] = {"$gt": int(clean_id)}
+                    logger.info(f"  使用数字 ID 增量条件: _id > {clean_id}")
+                else:
+                    # ObjectId
+                    query["_id"] = {"$gt": ObjectId(clean_id)}
+                    logger.info(f"  使用 _id 增量条件: _id > {clean_id}")
+            except Exception as e:
+                logger.warning(f"  无法解析 last_id: {last_id} ({e})，同步所有数据")
+                query = {}
         else:
             logger.info(f"  首次增量同步，同步所有数据")
         
@@ -839,17 +849,17 @@ def main():
                 logger.info(f"  集合 {collection_name} 已有同步记录，将跳过全量")
         
         if need_full_sync:
-            # 执行全量同步
-            logger.info("")
-            logger.info("============================================================")
-            logger.info("执行全量同步...")
-            logger.info("============================================================")
-            sync.run_full_sync(args.collection_pattern)
+            logger.info("执行全量同步（仅新集合或无记录的集合）...")
+            
+            for collection_name in collections:
+                table_name = collection_name.replace("-", "_").replace(".", "_")
+                if not sync.has_synced_before(table_name):
+                    logger.info(f"  开始全量同步: {collection_name}")
+                    sync.sync_collection_full(collection_name)
+                else:
+                    logger.info(f"  跳过（已有记录）: {collection_name}")
         else:
-            logger.info("")
-            logger.info("============================================================")
             logger.info("检测到已有同步记录，跳过全量同步")
-            logger.info("============================================================")
         
         # 转入持续增量同步
         logger.info("")

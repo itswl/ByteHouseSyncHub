@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  postgres-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: postgres-bytehouse-sync
+    restart: unless-stopped
+    env_file:
+      - postgres_to_bytehouse.env
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./logs:/app/logs
+    command: ["--mode", "auto", "--interval", "60"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
