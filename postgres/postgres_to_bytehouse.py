@@ -307,7 +307,7 @@ ORDER BY tuple()
             logger.error(f"创建表 {table_name} 失败: {e}")
             return False
 
-    def sync_table_full(self, table_name: str) -> int:
+    def sync_table_full(self, table_name: str, time_column: str = TIME_COLUMN) -> int:
         """全量同步表"""
         logger.info(f"开始全量同步: {table_name}")
         
@@ -361,7 +361,22 @@ ORDER BY tuple()
                 speed = total / elapsed if elapsed > 0 else 0
                 logger.info(f"  进度: {total:,}/{count:,} ({100*total/count:.1f}%) | {speed:.0f}/s")
         
-        self.update_sync_state(table_name, str(total), total)
+        # 保存最后一条记录的时间值（用于增量同步）
+        if time_column and time_column in col_names:
+            try:
+                with self.pg_conn.cursor() as cursor:
+                    cursor.execute(f"SELECT MAX({time_column}) FROM {table_name}")
+                    result = cursor.fetchone()
+                    if result and result[0]:
+                        last_time_value = result[0].strftime('%Y-%m-%d %H:%M:%S') if isinstance(result[0], datetime) else str(result[0])
+                        self.update_sync_state(table_name, last_time_value, total)
+                    else:
+                        self.update_sync_state(table_name, str(total), total)
+            except:
+                self.update_sync_state(table_name, str(total), total)
+        else:
+            self.update_sync_state(table_name, str(total), total)
+        
         elapsed = time.time() - start
         logger.info(f"✓ {table_name} 全量完成: {total:,} 条，耗时 {elapsed:.1f}s")
         return total
@@ -449,7 +464,7 @@ ORDER BY tuple()
         
         total = 0
         for t in tables:
-            total += self.sync_table_full(t)
+            total += self.sync_table_full(t, TIME_COLUMN)
         
         logger.info(f"全量同步完成: {total:,} 条")
 
